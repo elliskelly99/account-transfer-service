@@ -1,9 +1,7 @@
-package com.portfolio.account_transfer_service.Entity;
+package com.portfolio.account_transfer_service.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
-import org.aspectj.lang.annotation.RequiredTypes;
-import org.springframework.context.annotation.Primary;
 
 import java.math.BigDecimal;
 
