@@ -1,6 +1,7 @@
 package com.portfolio.account_transfer_service.repository;
 
 import com.portfolio.account_transfer_service.entity.Account;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -29,15 +30,22 @@ public class AccountRepositoryTest {
     */
     @Autowired
     AccountRepository accountRepository;
+    @Autowired
+    EntityManager entityManager;
 
     @Test
     void saveAccount() {
+
         Account account = new Account();
         account.setOwnerName("Ellis");
         account.setBalance(new BigDecimal("500"));
 
         accountRepository.save(account);
         long id = account.getId();
+
+        //Ensure we don't have persistence from in memory cache from hibernate and repository level
+        accountRepository.flush();//force any pending db operations in memory cache to be completed
+        entityManager.clear();//clear the hibernate layer for all entities
 
         Account savedAccount =  accountRepository.findById(id).orElseThrow(()->
                 new AssertionError("ID not found"));
