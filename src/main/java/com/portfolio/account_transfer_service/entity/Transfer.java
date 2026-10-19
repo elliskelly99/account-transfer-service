@@ -60,7 +60,7 @@ public class Transfer {
     private Account receiverAccount;
 
     //Guard checks at the java and database level to ensure we never pass any null values
-    @Column(nullable = false)//sql level check
+    @Column(nullable = false, precision = 19, scale = 2)//sql level check
     @Positive(message = "Transaction amount must be greater than 0")//Adds validation at the persistence boundary when Bean Validation is triggered
     @NotNull(message = "Transaction amount is required") //Adds validation at the persistence boundary when Bean Validation is triggered
     private BigDecimal transferAmount;
