@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "accounts" )
+@Table(name = "account" )
 public class Account {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)//Generation Auto for portability before DB decision made
