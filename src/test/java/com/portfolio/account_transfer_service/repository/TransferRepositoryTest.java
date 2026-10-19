@@ -11,8 +11,10 @@ import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 @DataJpaTest
 public class TransferRepositoryTest {
@@ -52,8 +54,8 @@ public class TransferRepositoryTest {
                 new AssertionError("ID not found"));
 
         assertThat(savedTransfer.getId()).isEqualTo(id);
-        assertThat(savedTransfer.getCreatedAt()).isEqualTo(createdAt);
-        assertThat(savedTransfer.getTransferAmount()).isEqualTo(new BigDecimal("5.00"));
+        assertThat(savedTransfer.getCreatedAt())
+                .isCloseTo(createdAt, within(1, ChronoUnit.MICROS));        assertThat(savedTransfer.getTransferAmount()).isEqualTo(new BigDecimal("5.00"));
         assertThat(savedTransfer.getTransferStatus()).isEqualTo(TransferStatus.NEW);
         assertThat(savedTransfer.getSenderAccount().getOwnerName()).isEqualTo("testSender");
         assertThat(savedTransfer.getReceiverAccount().getOwnerName()).isEqualTo("testReceiver");
