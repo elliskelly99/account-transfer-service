@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface AccountRepository extends JpaRepository<Account,Long> {
     /*
         By extending jpaRepository, we inherit these common methods:
+        Keyword for extended research: JPA QUERY METHODS
             - Save()
             - findById()
             - findAll()
