@@ -8,6 +8,8 @@ import java.math.BigDecimal;
 @Entity
 @Table(name = "account" )
 public class Account {
+
+    //TODO: Id should be by the persons phone number so we can simply just pass the phone number for easy lookup in db and mapping on client end
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)//Generation Auto for portability before DB decision made
     Long id;
@@ -15,6 +17,7 @@ public class Account {
     @NotBlank(message = "Owner name required")//application level
     @Column(name="ownerName", nullable = false)//Database level, can allow empty Strings, handles the literal Null
     String ownerName;
+    //TODO: ADD isActive flag for disabled accounts
     //default 0
     @Column(name = "balance", nullable = false)
 
