@@ -59,7 +59,7 @@ public class TransferService {
         Account receieverAccount = accountRepository.findById(receieverId).orElseThrow(() ->
                 new IllegalArgumentException(("Receiver Not found")));
 
-        if(amount.compareTo(BigDecimal.ZERO) < 0){
+        if(amount == null || amount.compareTo(BigDecimal.ZERO) <= 0){
             throw new IllegalArgumentException(("Invalid amount: must be greater than 0"));
         }
 
