@@ -13,14 +13,14 @@ import java.time.Instant;
             - senderAccount and RecieverAccount
 
         ensured two foreign key constraint on account
-            for example: Case when account is deleted(archived), we want the transfer history to persist
+            for example: Case when account is deleted(archived), we want the TransferService history to persist
 
             TODO:
-               implement a job that archives all deleted(disabled) account/transfer into an archived table
+               implement a job that archives all deleted(disabled) account/TransferService into an archived table
 
         Traded offs during implementation:
             Summary:
-                - Not storing our offset for our transfer creation time:
+                - Not storing our offset for our TransferService creation time:
                     - OffsetDateTime over Instant
                 - perks:
                     -backend model and db simplicity;
@@ -34,7 +34,7 @@ import java.time.Instant;
     */
 
 @Entity
-@Table(name = "transfer")
+@Table(name = "TransferService")
 public class Transfer {
 
     protected Transfer(){};
@@ -75,7 +75,7 @@ public class Transfer {
     /*
     TODO:
         eventually will add logic to give us the settledAtTime on coniditon that the Status is completed
-        will create method on the logic flow of a transfer
+        will create method on the logic flow of a TransferService
 
      */
 
@@ -88,6 +88,8 @@ public class Transfer {
 
     public TransferStatus getTransferStatus(){return transferStatus;}
     public Instant getCreatedAt(){return createdAt;}
+
+    public void setTransferStatus(TransferStatus transferStatus){this.transferStatus = transferStatus;}
 
 
 }
