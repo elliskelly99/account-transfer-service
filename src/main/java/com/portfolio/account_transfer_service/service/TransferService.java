@@ -31,7 +31,7 @@ public class TransferService {
      */
 
     @Transactional
-    private void transfer(Long senderId, Long receieverId, BigDecimal amount){
+    public void transfer(Long senderId, Long receieverId, BigDecimal amount){
         /*Check if sender and receiver account exist
             Expected behavior:
                 - Check that sender is not sending to themselves
@@ -59,38 +59,42 @@ public class TransferService {
         Account receieverAccount = accountRepository.findById(receieverId).orElseThrow(() ->
                 new IllegalArgumentException(("Receiver Not found")));
 
-        if(senderHasValidFunds(senderAccount, amount).equals(false)){
-            throw new IllegalArgumentException(("Invalid amount"));
+        if(amount.compareTo(BigDecimal.ZERO) < 0){
+            throw new IllegalArgumentException(("Invalid amount: must be greater than 0"));
         }
 
-/*
-    Design Decision:
-        - Let the Transfer entity act as the relationship owner to manage fund movements and account associations.
+        if(senderHasValidFunds(senderAccount, amount).equals(false)){
+            throw new IllegalArgumentException(("Invalid amount: Sender does not have enough funds"));
+        }
 
-    Pros:
-        - Single Point of update: Unidirectional updates ensure the Transfer entity is the sole source of truth,
-          making it easier to track and audit when changes are made to the sender, receiver, and transfer records.
-        - Decoupled Domain Models: Maintains the Many-to-One relationship on both sender and receiver without
-          bloating the Account entity with collection fields.
-        - Encapsulation: The entire state of the operation is captured in a single database row, making execution
-          flows easier to trace.
-        - No Synchronization Boilerplate: Eliminates the need for defensive helper functions to prevent data drift
-          between Account and Transfer objects in the persistence context.
+        /*
+            Design Decision:
+                - Let the Transfer entity act as the relationship owner to manage fund movements and account associations.
 
-    Cons:
-        - Object Navigation Overhead: Working with associated entity graphs requires navigating managed references,
-          which can slightly increase debugging complexity.
-            -> Fix: Document this architecture for the team. Ensure developers do not introduce accidental bidirectional
-               mappings or side - effect updates to Accounts during testing or future service expansions.
-        - Lacks Inverse Navigability: Unable to traverse directly back to a transaction history from an Account object instance.
-            -> Fix: Implement custom JPQL/derived query methods in the TransferRepository to fetch transfers by a given Account.
- */
+            Pros:
+                - Single Point of update: Unidirectional updates ensure the Transfer entity is the sole source of truth,
+                  making it easier to track and audit when changes are made to the sender, receiver, and transfer records.
+                - Decoupled Domain Models: Maintains the Many-to-One relationship on both sender and receiver without
+                  bloating the Account entity with collection fields.
+                - Encapsulation: The entire state of the operation is captured in a single database row, making execution
+                  flows easier to trace.
+                - No Synchronization Boilerplate: Eliminates the need for defensive helper functions to prevent data drift
+                  between Account and Transfer objects in the persistence context.
+
+            Cons:
+                - Object Navigation Overhead: Working with associated entity graphs requires navigating managed references,
+                  which can slightly increase debugging complexity.
+                    -> Fix: Document this architecture for the team. Ensure developers do not introduce accidental bidirectional
+                       mappings or side - effect updates to Accounts during testing or future service expansions.
+                - Lacks Inverse Navigability: Unable to traverse directly back to a transaction history from an Account object instance.
+                    -> Fix: Implement custom JPQL/derived query methods in the TransferRepository to fetch transfers by a given Account.
+         */
+
         //Scenario 1: Happy path transfer
         Transfer transfer = new Transfer(senderAccount,receieverAccount,amount);
 
         BigDecimal newSenderBalance = senderAccount.getBalance().subtract(amount);
         transfer.getSenderAccount().setBalance(newSenderBalance);
-
 
         BigDecimal newReceiverBalance = receieverAccount.getBalance().add(amount);
         transfer.getReceiverAccount().setBalance(newReceiverBalance);
@@ -110,6 +114,7 @@ public class TransferService {
             so we have a readable log to send over request that the sender/receiver are not valid
 
         */
+
         return !Objects.equals(senderId, receiverId);
     }
 
@@ -125,6 +130,5 @@ public class TransferService {
         BigDecimal senderBalance = sender.getBalance();
         return (senderBalance.compareTo(amount)) >= 0;
     }
-
 
 }
