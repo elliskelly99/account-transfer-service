@@ -2,6 +2,8 @@ package com.portfolio.account_transfer_service.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 
 import java.math.BigDecimal;
 
@@ -17,12 +19,15 @@ public class Account {
     @NotBlank(message = "Owner name required")//application level
     @Column(name="ownerName", nullable = false)//Database level, can allow empty Strings, handles the literal Null
     String ownerName;
-    //TODO: ADD isActive flag for disabled accounts
-    //default 0
-    @Column(name = "balance", nullable = false)
 
+    //TODO: ADD isActive flag for disabled accounts
+
+    //default 0
+    @Column(name = "balance", nullable = false, precision = 19, scale = 2)
+    @NotNull(message = "Balance amount is required") //Adds validation at the persistence boundary when Bean Validation is triggered
     BigDecimal balance = new BigDecimal("0.0");
-    @Version//Optimistic locking: Concurrency control, does not old strict database locking, conflcits are rare
+
+    @Version//Optimistic locking: Concurrency control, does not old strict database locking, conflicts are rare
     Long version;
 
     public Long getId(){ return id;}

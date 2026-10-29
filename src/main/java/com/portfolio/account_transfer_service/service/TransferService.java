@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.Objects;
 
 @Service
 public class TransferService {
@@ -20,6 +19,9 @@ public class TransferService {
     @Autowired
     AccountRepository accountRepository;
 
+    @Autowired
+    AccountService accountService;
+
     /*
         Transfer rules:
         - sender does not exist/not valid sender
@@ -27,11 +29,11 @@ public class TransferService {
         - Receiver does not exist/not valid receiver
              - Try/catch check if recover exist
         - sender is the same as receiver
-            - Check account IDs to see if they match try/catch statement
+            - Check account IDs to see if they match
      */
 
     @Transactional
-    public void transfer(Long senderId, Long receieverId, BigDecimal amount){
+    public void transfer(Long senderId, Long receiverId, BigDecimal amount){
         /*Check if sender and receiver account exist
             Expected behavior:
                 - Check that sender is not sending to themselves
@@ -39,6 +41,11 @@ public class TransferService {
             Input failure:
                 - Utilizing fail-fast principal:
                     - throw exception that sender/receiver not valid or amount
+                    Pros:
+                        -  These specific validation exceptions can be captured and
+                         routed to a downstream monitoring service via telemetry data to
+                          detect and alert on unusual or potentially fraudulent transfer patterns.
+
                     Cons:
                         - Can leak sensitive data in api response if we don't sanitize your response
                         correctly
@@ -46,23 +53,33 @@ public class TransferService {
                         for example: a generic NullPointerExpection does not give the developer
                         enough information if the sender ran out of money or  if  we're pointing
                         to the wrong sender account bug.
+                        - Can bloat logs
 
         */
+        Long sendertest =senderId;
+        Long receiverTest = receiverId;
 
-        if(senderAndReceiverAccountsValid(senderId, receieverId).equals(false)){
-            throw new IllegalArgumentException(("Not a valid sender and/or receiverAccount"));
+        if(accountService.senderAndReceiverAccountsTheSame(senderId, receiverId)){
+            throw new IllegalArgumentException(("Not a valid sender and/or receiver, sender and receiver the same ID"));
         }
 
-        Account senderAccount = accountRepository.findById(senderId).orElseThrow(() ->
-                new IllegalArgumentException(("Sender Not found")));
+        Account senderAccount = accountService.getAccountById(senderId);
 
-        Account receieverAccount = accountRepository.findById(receieverId).orElseThrow(() ->
-                new IllegalArgumentException(("Receiver Not found")));
+        Account receieverAccount = accountService.getAccountById(receiverId);
+
 
         if(amount == null || amount.compareTo(BigDecimal.ZERO) <= 0){
             throw new IllegalArgumentException(("Invalid amount: must be greater than 0"));
         }
+        if(amount.scale() < 0|| amount.scale() > 2){
+            throw new IllegalArgumentException(("Invalid amount: \n valid amounts: 10.50, 10.5, 10"));
+        }
+        if(amount.precision() > 19){
+            throw new IllegalArgumentException(("Invalid amount: precision must be less than 19"));
+        }
 
+
+        //FAILURE: CONCURRENCY IF SENDER IS BEING DEBITED MULTIPLE TIMES
         if(senderHasValidFunds(senderAccount, amount).equals(false)){
             throw new IllegalArgumentException(("Invalid amount: Sender does not have enough funds"));
         }
@@ -93,30 +110,88 @@ public class TransferService {
         //Scenario 1: Happy path transfer
         Transfer transfer = new Transfer(senderAccount,receieverAccount,amount);
 
+        BigDecimal oldSenderBalance = senderAccount.getBalance();
         BigDecimal newSenderBalance = senderAccount.getBalance().subtract(amount);
         transfer.getSenderAccount().setBalance(newSenderBalance);
 
+        BigDecimal oldReceiverBalance = receieverAccount.getBalance();
         BigDecimal newReceiverBalance = receieverAccount.getBalance().add(amount);
         transfer.getReceiverAccount().setBalance(newReceiverBalance);
 
+        //TODO:
+        //question: save the transfer as failed in db if check fails
+        checkIfDebitCreditSuccessful(senderAccount, receieverAccount, amount, oldSenderBalance, oldReceiverBalance,transfer);
+        //retry queue here try to process the transfer with debit and credit after check fails
+
         transfer.setTransferStatus(TransferStatus.COMPLETE);
+        //can fail here also we need to have a seperate check that the transfer persisted
         transferRepository.save(transfer);
-
-
+        //if fail then add to retry queue
     }
 
-    private Boolean senderAndReceiverAccountsValid(Long senderId, Long receiverId){
-        /*
-            Trade offs:
-            Objects.equals()
-            over
-            senderId.equals() so we get a true/false return and avoids nullPointerExpection
-            so we have a readable log to send over request that the sender/receiver are not valid
-
-        */
-
-        return !Objects.equals(senderId, receiverId);
+    /*
+    * Todo:
+    *  how will I handle retries of failed transfers?
+    *Retry Queue?
+    *
+    *
+    *  Future implementation:
+    * DLQ:
+    * Maybe some type of dead letter queue (KAFKA)
+    *
+    *
+    *
+    *
+    *
+    *
+    *
+    *
+┌─────────────┐
+│   Message   │
+│   Arrives   │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────────┐
+│  Process Message│
+└──────┬──────────┘
+       │
+       ├── Success ──▶ Continue
+       │
+       └── Failure ──▶ ┌──────────────┐
+                        │  Retry Queue │
+                        └──────┬───────┘
+                               │
+                    ┌──────────┼──────────┐
+                    │          │          │
+              Retry 1    Retry 2    Retry 3
+                    │          │          │
+                    └──────────┼──────────┘
+                               │
+                    ┌──────────┴──────────┐
+                    │                     │
+              Success              Max Retries
+                    │                     │
+                    │                     ▼
+                    │              ┌─────────────┐
+                    │              │     DLQ     │
+                    │              └─────────────┘
+                    │
+                    ▼
+              Continue
+    * */
+    private void checkIfDebitCreditSuccessful(Account senderAccount, Account receiverAccount, BigDecimal amount,
+                                                BigDecimal oldSenderBalance, BigDecimal oldReceiverBalance, Transfer transfer){
+        if(!oldSenderBalance.subtract(senderAccount.getBalance()).equals(amount)){
+            transfer.setTransferStatus(TransferStatus.FAILED);
+            throw new RuntimeException("Debit not successful");
+        };
+        if (!receiverAccount.getBalance().subtract(oldReceiverBalance).equals(amount)){
+            transfer.setTransferStatus(TransferStatus.FAILED);
+            throw new RuntimeException("Credit not successful");
+        }
     }
+
 
     /*
         Expected true :
