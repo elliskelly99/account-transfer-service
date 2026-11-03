@@ -3,7 +3,6 @@ package com.portfolio.account_transfer_service.repository;
 import com.portfolio.account_transfer_service.entity.Account;
 import com.portfolio.account_transfer_service.entity.Transfer;
 import com.portfolio.account_transfer_service.entity.TransferStatus;
-import org.hibernate.AssertionFailure;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -54,8 +53,8 @@ public class TransferRepositoryTest {
                 new AssertionError("ID not found"));
 
         assertThat(savedTransfer.getId()).isEqualTo(id);
-        assertThat(savedTransfer.getCreatedAt())
-                .isCloseTo(createdAt, within(1, ChronoUnit.MICROS));        assertThat(savedTransfer.getTransferAmount()).isEqualTo(new BigDecimal("5.00"));
+        assertThat(savedTransfer.getCreatedAt()).isCloseTo(createdAt, within(1, ChronoUnit.MICROS));
+        assertThat(savedTransfer.getTransferAmount()).isEqualTo(new BigDecimal("5.00"));
         assertThat(savedTransfer.getTransferStatus()).isEqualTo(TransferStatus.NEW);
         assertThat(savedTransfer.getSenderAccount().getOwnerName()).isEqualTo("testSender");
         assertThat(savedTransfer.getReceiverAccount().getOwnerName()).isEqualTo("testReceiver");

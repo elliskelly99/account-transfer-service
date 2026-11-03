@@ -6,4 +6,4 @@
 
 ## Tech
 - Java 21, Spring Boot, Spring Data JPA, Maven, H2
-- GitHub Actions CI, CodeRabbit for Automated PR review
+- GitHub Actions CI, CodeRabbit for Automated PR review (Acts like a senior engineer reviewer)
