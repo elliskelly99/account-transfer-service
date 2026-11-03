@@ -6,16 +6,13 @@ import com.portfolio.account_transfer_service.repository.AccountRepository;
 import com.portfolio.account_transfer_service.repository.TransferRepository;
 import com.portfolio.account_transfer_service.service.AccountService;
 import com.portfolio.account_transfer_service.service.TransferService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -53,7 +50,7 @@ public class TransferServiceTest {
        when(accountService.senderAndReceiverAccountsTheSame(senderId, receiverId)).thenReturn(true);
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
-                () -> transferService.transfer(senderId , receiverId , new BigDecimal("10.00"))
+                () -> transferService.executeTransfer(senderId , receiverId , new BigDecimal("10.00"))
         );
 
         assertEquals("Not a valid sender and/or receiver, sender and receiver the same ID", exception.getMessage());
@@ -68,7 +65,7 @@ public class TransferServiceTest {
         when(accountService.senderAndReceiverAccountsTheSame(senderId, receiverId)).thenReturn(false);
 
         IllegalArgumentException illegalArgumentException = assertThrows(IllegalArgumentException.class,
-                ()-> transferService.transfer(senderId,receiverId, new BigDecimal("50.0")));
+                ()-> transferService.executeTransfer(senderId,receiverId, new BigDecimal("50.0")));
 
         assertEquals("Account not found", illegalArgumentException.getMessage());
 
@@ -83,12 +80,13 @@ public class TransferServiceTest {
         when(accountService.senderAndReceiverAccountsTheSame(senderId, receiverId)).thenReturn(false);
 
         IllegalArgumentException illegalArgumentException = assertThrows(IllegalArgumentException.class,
-                ()-> transferService.transfer(senderId,receiverId, new BigDecimal("50.0")));
+                ()-> transferService.executeTransfer(senderId,receiverId, new BigDecimal("50.0")));
 
         assertEquals("Account not found", illegalArgumentException.getMessage());
     }
 
-    @Test void invalidAmountLessThanZero(){
+    @Test
+    void invalidAmountLessThanZero(){
         Account sender = new Account();
         sender.setBalance(new BigDecimal("-5.00"));
 
@@ -96,12 +94,13 @@ public class TransferServiceTest {
         when(accountService.getAccountById(2L)).thenReturn(new Account());
 
         IllegalArgumentException illegalArgumentException = assertThrows(IllegalArgumentException.class,
-                ()-> transferService.transfer(1L,2L, new BigDecimal("-5.00")));
+                ()-> transferService.executeTransfer(1L,2L, new BigDecimal("-5.00")));
 
         assertEquals("Invalid amount: must be greater than 0", illegalArgumentException.getMessage());
     }
 
-    @Test void invalidAmountSenderNotEnoughFunds(){
+    @Test
+    void invalidAmountSenderNotEnoughFunds(){
         Account sender = new Account();
         sender.setBalance(new BigDecimal("-5.00"));
 
@@ -109,11 +108,12 @@ public class TransferServiceTest {
         when(accountService.getAccountById(2L)).thenReturn(new Account());
 
         IllegalArgumentException illegalArgumentException = assertThrows(IllegalArgumentException.class,
-                ()-> transferService.transfer(1L,2L, new BigDecimal("5.00")));
+                ()-> transferService.executeTransfer(1L,2L, new BigDecimal("5.00")));
 
         assertEquals("Invalid amount: Sender does not have enough funds", illegalArgumentException.getMessage());
     }
-    @Test void happyPathTransfer(){
+    @Test
+    void happyPathTransfer(){
         Account sender = new Account();
         sender.setBalance(new BigDecimal("100.00"));
 
@@ -123,12 +123,10 @@ public class TransferServiceTest {
         when(accountService.getAccountById(1L)).thenReturn(sender);
         when(accountService.getAccountById(2L)).thenReturn(receiver);
 
-        transferService.transfer(1L,2L, new BigDecimal("5.00"));
+        transferService.executeTransfer(1L,2L, new BigDecimal("5.00"));
 
-        verify(transferRepository).save(any(Transfer.class));
-        assertEquals(new BigDecimal("95.00"), sender.getBalance());
+        verify(transferRepository).saveAndFlush(any(Transfer.class));        assertEquals(new BigDecimal("95.00"), sender.getBalance());
         assertEquals(new BigDecimal("5.00"), receiver.getBalance());
 
     }
-
 }

@@ -33,7 +33,4 @@ public class AccountService {
         */
         return Objects.equals(senderId, receiverId);
     }
-
-
-
 }

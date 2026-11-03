@@ -1,13 +1,11 @@
 package com.portfolio.account_transfer_service.integration;
 
 import com.portfolio.account_transfer_service.entity.Account;
-import com.portfolio.account_transfer_service.entity.Transfer;
 import com.portfolio.account_transfer_service.repository.AccountRepository;
 import com.portfolio.account_transfer_service.repository.TransferRepository;
 import com.portfolio.account_transfer_service.service.AccountService;
 import com.portfolio.account_transfer_service.service.TransferService;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityManagerFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,6 +13,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest
 public class TransferServiceIntegrationTest {
@@ -91,14 +91,14 @@ public class TransferServiceIntegrationTest {
         accountRepository.flush();
         entityManager.clear();
 
-        sender= accountRepository.findById(senderId).orElseThrow(()->
+        sender = accountRepository.findById(senderId).orElseThrow(()->
                 new IllegalArgumentException("senderId not found"));
 
         receiver= accountRepository.findById(receiverId).orElseThrow(() ->
                 new IllegalArgumentException("receiverId not found"));
 
 
-        transferService.transfer(senderId, receiverId, new BigDecimal("5.00"));
+        transferService.executeTransfer(senderId, receiverId, new BigDecimal("5.00"));
 
         sender= accountRepository.findById(senderId).orElseThrow(()->
                 new IllegalArgumentException("senderId not found"));
@@ -106,6 +106,7 @@ public class TransferServiceIntegrationTest {
         receiver= accountRepository.findById(receiverId).orElseThrow(() ->
                 new IllegalArgumentException("receiverId not found"));
 
+        //ASSERT TRANSFER BALANCE
         assertTrue(sender.getBalance().compareTo(new BigDecimal("45.00")) == 0);
         assertTrue(receiver.getBalance().compareTo(new BigDecimal("5.00")) == 0);
 
@@ -139,7 +140,7 @@ public class TransferServiceIntegrationTest {
 
 
         IllegalArgumentException illegalArgumentException = assertThrows(IllegalArgumentException.class, () -> {
-                    transferService.transfer(senderId, receiverId, new BigDecimal("5.00"));
+                    transferService.executeTransfer(senderId, receiverId, new BigDecimal("5.00"));
                 });
 
         sender= accountRepository.findById(senderId).orElseThrow(()->
@@ -151,7 +152,6 @@ public class TransferServiceIntegrationTest {
         assertTrue(sender.getBalance().compareTo(new BigDecimal("2.00")) == 0);
         assertTrue(receiver.getBalance().compareTo(new BigDecimal("0.00")) == 0);
         assertEquals("Invalid amount: Sender does not have enough funds",illegalArgumentException.getMessage());
-
     }
 
     @Test
@@ -182,7 +182,7 @@ public class TransferServiceIntegrationTest {
 
 
        IllegalArgumentException illegalArgumentException = assertThrows(IllegalArgumentException.class, () -> {
-            transferService.transfer(senderId, receiverId, new BigDecimal("-5.00"));
+            transferService.executeTransfer(senderId, receiverId, new BigDecimal("-5.00"));
         });
 
         sender= accountRepository.findById(senderId).orElseThrow(()->
@@ -195,10 +195,4 @@ public class TransferServiceIntegrationTest {
         assertTrue(receiver.getBalance().compareTo(new BigDecimal("0.00")) == 0);
         assertEquals("Invalid amount: must be greater than 0",illegalArgumentException.getMessage());
     }
-
-    //senderNotEnoughFundsTransfer()
-
-
-
-
 }

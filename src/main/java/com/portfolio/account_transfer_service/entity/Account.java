@@ -35,6 +35,14 @@ public class Account {
     public String getOwnerName(){return ownerName;}
     public void setOwnerName(String ownerName){this.ownerName = ownerName;}
 
+    /**
+     * Sets the account balance directly.
+     * <p>
+     * Intended for use only by TransferService and tests. Other callers
+     * should not change balances through this method.
+     *
+     * @param balance the new balance
+     */
     public void setBalance(BigDecimal balance){this.balance = balance;}
     public BigDecimal getBalance(){return balance;}
 
